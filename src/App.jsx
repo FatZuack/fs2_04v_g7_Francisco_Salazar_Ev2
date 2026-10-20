@@ -1,72 +1,108 @@
 import { useEffect, useState } from 'react'
-import { Container, Row, Col, Card, Badge } from 'react-bootstrap'
+import { Routes, Route } from 'react-router-dom'
+import NavbarPasteleria from './components/NavbarPasteleria'
+import TiendaView from './views/TiendaView'
+import ProductoDetalleView from './views/ProductoDetalleView'
+import CarritoView from './views/CarritoView'
+import CheckoutView from './views/CheckoutView'
 import { productosIniciales } from './data/productosIniciales'
 
 function App() {
-  const [productos, setProductos] = useState([])
-
+  // 1. Inicializar catálogo de productos en localStorage si está vacío
   useEffect(() => {
-    // 1. Inicializar LocalStorage con los productos si aún no existen
-    const guardados = localStorage.getItem('productos')
-    if (!guardados) {
+    const productosGuardados = localStorage.getItem('productos')
+    if (!productosGuardados) {
       localStorage.setItem('productos', JSON.stringify(productosIniciales))
-      setProductos(productosIniciales)
-    } else {
-      setProductos(JSON.parse(guardados))
     }
   }, [])
 
+  // 2. Estado persistente del carrito
+  const [carrito, setCarrito] = useState(() => {
+    const guardado = localStorage.getItem('carrito')
+    return guardado ? JSON.parse(guardado) : []
+  })
+
+  // Sincronizar cambios del carrito con localStorage
+  useEffect(() => {
+    localStorage.setItem('carrito', JSON.stringify(carrito))
+  }, [carrito])
+
+  // Funciones controladoras del carrito
+  const handleAgregarAlCarrito = (producto) => {
+    setCarrito((prev) => {
+      const existe = prev.find((item) => item.id === producto.id)
+      if (existe) {
+        return prev.map((item) =>
+          item.id === producto.id
+            ? { ...item, cantidad: Math.min(item.cantidad + 1, item.stock) }
+            : item
+        )
+      }
+      return [...prev, { ...producto, cantidad: 1 }]
+    })
+  }
+
+  const handleModificarCantidad = (id, nuevaCantidad) => {
+    if (nuevaCantidad <= 0) {
+      handleEliminarDelCarrito(id)
+      return
+    }
+    setCarrito((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, cantidad: nuevaCantidad } : item))
+    )
+  }
+
+  const handleEliminarDelCarrito = (id) => {
+    setCarrito((prev) => prev.filter((item) => item.id !== id))
+  }
+
+  const handleVaciarCarrito = () => {
+    setCarrito([])
+  }
+
+  // Contador total para el badge del Navbar
+  const totalItemsCarrito = carrito.reduce((acc, item) => acc + item.cantidad, 0)
+
   return (
-    <div className="bg-light min-vh-100 py-4">
-      <Container>
-        <header className="pb-3 mb-4 border-bottom d-flex justify-content-between align-items-center">
-          <div>
-            <h1 className="h3 mb-0 text-dark fw-bold">Pastelería Mil Sabores</h1>
-            <small className="text-muted">Panel Base - React + Vite + Bootstrap</small>
-          </div>
-          <Badge bg="success" className="px-3 py-2">
-            LocalStorage Activo
-          </Badge>
-        </header>
+    <div className="bg-light min-vh-100 d-flex flex-column">
+      <NavbarPasteleria totalCarrito={totalItemsCarrito} />
 
-        <div className="p-4 mb-4 bg-white rounded-3 shadow-sm border">
-          <h2 className="h5 fw-bold">Estado de la Base de Datos Simulada</h2>
-          <p className="text-muted mb-0">
-            Se han cargado correctamente <strong>{productos.length}</strong> tortas y postres en el navegador.
-          </p>
-        </div>
+      <main className="flex-grow-1">
+        <Routes>
+          <Route
+            path="/"
+            element={<TiendaView onAgregarCarrito={handleAgregarAlCarrito} />}
+          />
+          <Route
+            path="/producto/:id"
+            element={<ProductoDetalleView onAgregarCarrito={handleAgregarAlCarrito} />}
+          />
+          <Route
+            path="/carrito"
+            element={
+              <CarritoView
+                carrito={carrito}
+                onModificarCantidad={handleModificarCantidad}
+                onEliminar={handleEliminarDelCarrito}
+                onVaciar={handleVaciarCarrito}
+              />
+            }
+          />
+          <Route
+            path="/checkout"
+            element={
+              <CheckoutView
+                carrito={carrito}
+                onVaciarCarrito={handleVaciarCarrito}
+              />
+            }
+          />
+        </Routes>
+      </main>
 
-        <h3 className="h5 mb-3 fw-bold">Catálogo Inicial Cargado:</h3>
-        <Row className="g-3">
-          {productos.map((prod) => (
-            <Col key={prod.id} xs={12} sm={6} md={4}>
-              <Card className="h-100 shadow-sm border-0">
-                <Card.Img
-                  variant="top"
-                  src={prod.imagen}
-                  alt={prod.nombre}
-                  style={{ height: '180px', objectFit: 'cover' }}
-                />
-                <Card.Body>
-                  <Badge bg="secondary" className="mb-2">
-                    {prod.categoria}
-                  </Badge>
-                  <Card.Title className="h6 fw-bold">{prod.nombre}</Card.Title>
-                  <Card.Text className="small text-muted mb-2">
-                    {prod.descripcion}
-                  </Card.Text>
-                  <div className="d-flex justify-content-between align-items-center mt-auto">
-                    <span className="fw-bold text-primary">
-                      ${prod.precio.toLocaleString('es-CL')}
-                    </span>
-                    <small className="text-muted">Stock: {prod.stock}</small>
-                  </div>
-                </Card.Body>
-              </Card>
-            </Col>
-          ))}
-        </Row>
-      </Container>
+      <footer className="bg-dark text-white text-center py-3 mt-5">
+        <small>© 2026 Pastelería Mil Sabores — Proyecto DSY1104 Evaluación Parcial 2</small>
+      </footer>
     </div>
   )
 }
