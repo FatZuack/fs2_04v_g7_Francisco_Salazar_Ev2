@@ -164,7 +164,7 @@ function App() {
       </main>
 
       <footer className="bg-dark text-white text-center py-3 mt-5">
-        <small>© 2026 Pastelería Mil Sabores — Proyecto DSY1104 Evaluación Parcial 2</small>
+        <small>© 2026 Pastelería Mil Sabores — ro7sopmi</small>
       </footer>
     </div>
   )

@@ -1,111 +1,84 @@
+/* Paleta estilo Bosque / Verde Esmeralda */
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
-
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
-
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
+  --color-bosque-oscuro: #112d20;     /* Para la barra superior (navbar) y pie de página */
+  --color-esmeralda: #1b4332;         /* Para botones principales y destacados */
+  --color-esmeralda-hover: #143628;   /* Hover de botones */
+  --color-esmeralda-suave: #e8f5ed;   /* Detalles sutiles y tarjetas */
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
-}
-
+/* Fondo general blanco */
 body {
-  margin: 0;
+  background-color: #ffffff !important;
+  color: #212529;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
+/* Barra de navegación superior y pie de página (reemplaza el gris oscuro) */
+.bg-dark {
+  background-color: var(--color-bosque-oscuro) !important;
 }
 
-h1,
-h2 {
-  font-family: var(--heading);
+.navbar {
+  border-bottom: 2px solid #2d6a4f;
+}
+
+/* Botones principales (reemplaza el azul por verde esmeralda) */
+.btn-primary {
+  background-color: var(--color-esmeralda) !important;
+  border-color: var(--color-esmeralda) !important;
+  color: #ffffff !important;
   font-weight: 500;
-  color: var(--text-h);
 }
 
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
-  margin: 0;
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active {
+  background-color: var(--color-esmeralda-hover) !important;
+  border-color: var(--color-esmeralda-hover) !important;
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
+/* Botones con borde (Ver Detalle) */
+.btn-outline-primary {
+  color: var(--color-esmeralda) !important;
+  border-color: var(--color-esmeralda) !important;
+  background-color: transparent !important;
+  font-weight: 500;
 }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+.btn-outline-primary:hover,
+.btn-outline-primary:focus,
+.btn-outline-primary:active {
+  background-color: var(--color-esmeralda) !important;
+  border-color: var(--color-esmeralda) !important;
+  color: #ffffff !important;
+}
+
+/* Precios y textos destacados en azul pasan a verde bosque */
+.text-primary {
+  color: var(--color-esmeralda) !important;
+}
+
+/* Enlaces del sitio */
+a {
+  color: var(--color-esmeralda);
+}
+
+a:hover {
+  color: var(--color-esmeralda-hover);
+}
+
+/* Badges / etiquetas de categoría en las tarjetas */
+.badge.bg-secondary {
+  background-color: #40916c !important;
+}
+
+/* Tarjetas con borde suave y sombra limpia */
+.card {
+  border: 1px solid #e9ecef;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 16px rgba(19, 78, 56, 0.08) !important;
 }
