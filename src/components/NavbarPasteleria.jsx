@@ -1,9 +1,15 @@
-import { Container, Nav, Navbar, Badge } from 'react-bootstrap'
-import { NavLink } from 'react-router-dom'
+import { Container, Nav, Navbar, Badge, Button } from 'react-bootstrap'
+import { NavLink, useNavigate } from 'react-router-dom'
 
-function NavbarPasteleria({ totalCarrito = 0 }) {
-  // Leemos si hay un usuario logueado en sessionStorage
-  const usuarioSesion = JSON.parse(sessionStorage.getItem('usuarioSesion') || 'null')
+function NavbarPasteleria({ totalCarrito = 0, usuarioSesion, onLogout }) {
+  const navigate = useNavigate()
+
+  const handleCerrarSesion = () => {
+    onLogout()
+    navigate('/')
+  }
+
+  const esAdmin = usuarioSesion?.rol === 'Administrador'
 
   return (
     <Navbar bg="dark" variant="dark" expand="lg" sticky="top" className="shadow-sm">
@@ -27,16 +33,27 @@ function NavbarPasteleria({ totalCarrito = 0 }) {
                 </Badge>
               )}
             </Nav.Link>
-            <Nav.Link as={NavLink} to="/admin/productos">
-              Administración
-            </Nav.Link>
+            {/* Solo se habilita la opción de administración si el usuario es Administrador */}
+            {esAdmin && (
+              <Nav.Link as={NavLink} to="/admin/productos" className="text-info fw-semibold">
+                ⚙️ Administración
+              </Nav.Link>
+            )}
           </Nav>
 
-          <Nav className="ms-auto align-items-center">
+          <Nav className="ms-auto align-items-center gap-2">
             {usuarioSesion ? (
-              <span className="navbar-text me-3 text-light">
-                Hola, <strong>{usuarioSesion.nombre}</strong> ({usuarioSesion.rol})
-              </span>
+              <>
+                <div className="text-light me-2 small">
+                  Hola, <strong>{usuarioSesion.nombre}</strong>{' '}
+                  <Badge bg={esAdmin ? 'danger' : 'primary'} className="ms-1">
+                    {usuarioSesion.rol}
+                  </Badge>
+                </div>
+                <Button variant="outline-light" size="sm" onClick={handleCerrarSesion}>
+                  Cerrar Sesión
+                </Button>
+              </>
             ) : (
               <>
                 <Nav.Link as={NavLink} to="/login">
