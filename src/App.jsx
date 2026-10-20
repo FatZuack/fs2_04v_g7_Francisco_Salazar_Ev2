@@ -5,10 +5,11 @@ import TiendaView from './views/TiendaView'
 import ProductoDetalleView from './views/ProductoDetalleView'
 import CarritoView from './views/CarritoView'
 import CheckoutView from './views/CheckoutView'
+import AdminProductosView from './views/AdminProductosView'
 import { productosIniciales } from './data/productosIniciales'
 
 function App() {
-  // 1. Inicializar catálogo de productos en localStorage si está vacío
+  // 1. Inicializar catálogo en localStorage si no existe
   useEffect(() => {
     const productosGuardados = localStorage.getItem('productos')
     if (!productosGuardados) {
@@ -96,6 +97,10 @@ function App() {
                 onVaciarCarrito={handleVaciarCarrito}
               />
             }
+          />
+          <Route
+            path="/admin/productos"
+            element={<AdminProductosView />}
           />
         </Routes>
       </main>
