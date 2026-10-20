@@ -1,121 +1,73 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useEffect, useState } from 'react'
+import { Container, Row, Col, Card, Badge } from 'react-bootstrap'
+import { productosIniciales } from './data/productosIniciales'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [productos, setProductos] = useState([])
+
+  useEffect(() => {
+    // 1. Inicializar LocalStorage con los productos si aún no existen
+    const guardados = localStorage.getItem('productos')
+    if (!guardados) {
+      localStorage.setItem('productos', JSON.stringify(productosIniciales))
+      setProductos(productosIniciales)
+    } else {
+      setProductos(JSON.parse(guardados))
+    }
+  }, [])
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
+    <div className="bg-light min-vh-100 py-4">
+      <Container>
+        <header className="pb-3 mb-4 border-bottom d-flex justify-content-between align-items-center">
+          <div>
+            <h1 className="h3 mb-0 text-dark fw-bold">Pastelería Mil Sabores</h1>
+            <small className="text-muted">Panel Base - React + Vite + Bootstrap</small>
+          </div>
+          <Badge bg="success" className="px-3 py-2">
+            LocalStorage Activo
+          </Badge>
+        </header>
+
+        <div className="p-4 mb-4 bg-white rounded-3 shadow-sm border">
+          <h2 className="h5 fw-bold">Estado de la Base de Datos Simulada</h2>
+          <p className="text-muted mb-0">
+            Se han cargado correctamente <strong>{productos.length}</strong> tortas y postres en el navegador.
           </p>
         </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+        <h3 className="h5 mb-3 fw-bold">Catálogo Inicial Cargado:</h3>
+        <Row className="g-3">
+          {productos.map((prod) => (
+            <Col key={prod.id} xs={12} sm={6} md={4}>
+              <Card className="h-100 shadow-sm border-0">
+                <Card.Img
+                  variant="top"
+                  src={prod.imagen}
+                  alt={prod.nombre}
+                  style={{ height: '180px', objectFit: 'cover' }}
+                />
+                <Card.Body>
+                  <Badge bg="secondary" className="mb-2">
+                    {prod.categoria}
+                  </Badge>
+                  <Card.Title className="h6 fw-bold">{prod.nombre}</Card.Title>
+                  <Card.Text className="small text-muted mb-2">
+                    {prod.descripcion}
+                  </Card.Text>
+                  <div className="d-flex justify-content-between align-items-center mt-auto">
+                    <span className="fw-bold text-primary">
+                      ${prod.precio.toLocaleString('es-CL')}
+                    </span>
+                    <small className="text-muted">Stock: {prod.stock}</small>
+                  </div>
+                </Card.Body>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      </Container>
+    </div>
   )
 }
 
