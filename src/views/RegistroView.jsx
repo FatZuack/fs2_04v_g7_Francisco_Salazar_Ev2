@@ -1,8 +1,11 @@
 import { useState } from 'react'
-import { Container, Card, Form, Button, Alert, Row, Col } from 'react-bootstrap'
+import { Container, Card, Form, Button, Alert, Row, Col, Spinner } from 'react-bootstrap'
 import { Link, useNavigate } from 'react-router-dom'
+import { authService } from '../services/authService'
+import { saveAuthSession } from '../utils/authSession'
+import { getErrorMessage } from '../utils/getErrorMessage'
 
-function RegistroView({ onLogin }) {
+function RegistroView() {
   const navigate = useNavigate()
   const [formData, setFormData] = useState({
     nombre: '',
@@ -12,14 +15,16 @@ function RegistroView({ onLogin }) {
     confirmPassword: '',
   })
   const [error, setError] = useState('')
+  const [cargando, setCargando] = useState(false)
 
   const handleChange = (e) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
+    setError('')
 
     if (formData.password.length < 6) {
       setError('La contraseña debe tener al menos 6 caracteres.')
@@ -31,32 +36,21 @@ function RegistroView({ onLogin }) {
       return
     }
 
-    const usuarios = JSON.parse(localStorage.getItem('usuarios') || '[]')
-    const yaExiste = usuarios.some(
-      (u) => u.email.toLowerCase() === formData.email.trim().toLowerCase()
-    )
-
-    if (yaExiste) {
-      setError('Ya existe una cuenta registrada con este correo electrónico.')
-      return
+    setCargando(true)
+    try {
+      const data = await authService.register({
+        nombre: formData.nombre.trim(),
+        email: formData.email.trim().toLowerCase(),
+        telefono: formData.telefono.trim(),
+        password: formData.password,
+      })
+      saveAuthSession(data)
+      navigate('/', { replace: true })
+    } catch (err) {
+      setError(getErrorMessage(err))
+    } finally {
+      setCargando(false)
     }
-
-    // Crear el nuevo usuario con rol 'Cliente'
-    const nuevoUsuario = {
-      id: Date.now(),
-      nombre: formData.nombre,
-      email: formData.email.trim().toLowerCase(),
-      telefono: formData.telefono,
-      password: formData.password,
-      rol: 'Cliente',
-      fechaRegistro: new Date().toLocaleDateString('es-CL'),
-    }
-
-    localStorage.setItem('usuarios', JSON.stringify([...usuarios, nuevoUsuario]))
-
-    // Iniciar sesión automáticamente y redirigir al catálogo
-    onLogin(nuevoUsuario)
-    navigate('/')
   }
 
   return (
@@ -137,8 +131,15 @@ function RegistroView({ onLogin }) {
             </Form.Group>
 
             <div className="d-grid mb-3">
-              <Button variant="success" type="submit" size="lg">
-                Registrarse
+              <Button variant="success" type="submit" size="lg" disabled={cargando}>
+                {cargando ? (
+                  <>
+                    <Spinner animation="border" size="sm" className="me-2" />
+                    Registrando...
+                  </>
+                ) : (
+                  'Registrarse'
+                )}
               </Button>
             </div>
           </Form>

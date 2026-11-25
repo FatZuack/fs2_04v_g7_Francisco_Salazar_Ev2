@@ -1,23 +1,46 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { Container, Row, Col, Card, Button, Badge, Alert } from 'react-bootstrap'
+import { Container, Row, Col, Card, Button, Badge, Alert, Spinner } from 'react-bootstrap'
+import { productoService } from '../services/productoService'
+import { getErrorMessage } from '../utils/getErrorMessage'
 
 function ProductoDetalleView({ onAgregarCarrito }) {
-  const { id } = useParams() // Captura el ID de la torta desde la URL
+  const { id } = useParams()
   const [producto, setProducto] = useState(null)
+  const [cargando, setCargando] = useState(true)
+  const [error, setError] = useState('')
   const [mensaje, setMensaje] = useState(false)
 
   useEffect(() => {
-    const productosGuardados = JSON.parse(localStorage.getItem('productos') || '[]')
-    const encontrado = productosGuardados.find((p) => p.id === Number(id))
-    setProducto(encontrado)
+    const cargarDetalle = async () => {
+      setCargando(true)
+      setError('')
+      try {
+        const data = await productoService.find(id)
+        setProducto(data)
+      } catch (err) {
+        setError(getErrorMessage(err))
+      } finally {
+        setCargando(false)
+      }
+    }
+    cargarDetalle()
   }, [id])
 
-  if (!producto) {
+  if (cargando) {
+    return (
+      <Container className="py-5 text-center">
+        <Spinner animation="border" variant="success" />
+        <p className="text-muted mt-2">Cargando producto...</p>
+      </Container>
+    )
+  }
+
+  if (error || !producto) {
     return (
       <Container className="py-5 text-center">
         <h3>Producto no encontrado</h3>
-        <p className="text-muted">El producto que buscas no existe o fue eliminado.</p>
+        <p className="text-muted">{error || 'El producto que buscas no existe o fue eliminado.'}</p>
         <Button as={Link} to="/" variant="primary">
           Volver al Catálogo
         </Button>
@@ -66,11 +89,20 @@ function ProductoDetalleView({ onAgregarCarrito }) {
 
             <p className="mb-4">
               <strong>Disponibilidad:</strong>{' '}
-              <span className="badge bg-success">{producto.stock} unidades en stock</span>
+              {producto.stock > 0 ? (
+                <span className="badge bg-success">{producto.stock} unidades en stock</span>
+              ) : (
+                <span className="badge bg-danger">Agotado</span>
+              )}
             </p>
 
             <div className="d-grid gap-2 d-md-flex">
-              <Button variant="primary" size="lg" onClick={handleAgregar}>
+              <Button
+                variant="primary"
+                size="lg"
+                onClick={handleAgregar}
+                disabled={producto.stock <= 0}
+              >
                 🛒 Añadir al carrito
               </Button>
               <Button as={Link} to="/carrito" variant="warning" size="lg">

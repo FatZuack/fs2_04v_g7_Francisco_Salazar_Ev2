@@ -1,19 +1,32 @@
 import { useState, useEffect } from 'react'
-import { Container, Row, Col, Form, InputGroup } from 'react-bootstrap'
+import { Container, Row, Col, Form, InputGroup, Spinner, Alert } from 'react-bootstrap'
 import ProductCard from '../components/ProductCard'
+import { productoService } from '../services/productoService'
+import { getErrorMessage } from '../utils/getErrorMessage'
 
 function TiendaView({ onAgregarCarrito }) {
   const [productos, setProductos] = useState([])
   const [filtroCategoria, setFiltroCategoria] = useState('Todas')
   const [busqueda, setBusqueda] = useState('')
+  const [cargando, setCargando] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    // Cargar productos actualizados desde localStorage
-    const guardados = JSON.parse(localStorage.getItem('productos') || '[]')
-    setProductos(guardados)
+    const cargarCatalogo = async () => {
+      setCargando(true)
+      setError('')
+      try {
+        const data = await productoService.list()
+        setProductos(data)
+      } catch (err) {
+        setError(getErrorMessage(err))
+      } finally {
+        setCargando(false)
+      }
+    }
+    cargarCatalogo()
   }, [])
 
-  // Filtrado dinámico por categoría y texto de búsqueda
   const productosFiltrados = productos.filter((prod) => {
     const coincideCategoria =
       filtroCategoria === 'Todas' || prod.categoria === filtroCategoria
@@ -23,12 +36,10 @@ function TiendaView({ onAgregarCarrito }) {
     return coincideCategoria && coincideTexto
   })
 
-  // Obtener categorías únicas presentes en los datos
   const categorias = ['Todas', ...new Set(productos.map((p) => p.categoria))]
 
   return (
     <Container className="py-4">
-      {/* Banner de bienvenida */}
       <div className="p-4 mb-4 bg-white rounded-3 shadow-sm border text-center">
         <h1 className="display-6 fw-bold text-dark">Nuestras Delicias Artesanales</h1>
         <p className="lead text-muted mb-0">
@@ -36,7 +47,8 @@ function TiendaView({ onAgregarCarrito }) {
         </p>
       </div>
 
-      {/* Controles de Filtro y Búsqueda */}
+      {error && <Alert variant="danger">{error}</Alert>}
+
       <Row className="mb-4 g-3">
         <Col md={8}>
           <InputGroup>
@@ -63,25 +75,31 @@ function TiendaView({ onAgregarCarrito }) {
         </Col>
       </Row>
 
-      {/* Grilla responsiva de productos */}
-      <Row className="g-4">
-        {productosFiltrados.length > 0 ? (
-          productosFiltrados.map((producto) => (
-            <Col key={producto.id} xs={12} sm={6} lg={4}>
-              <ProductCard
-                producto={producto}
-                onAgregarCarrito={onAgregarCarrito}
-              />
+      {cargando ? (
+        <div className="text-center py-5">
+          <Spinner animation="border" variant="success" />
+          <p className="text-muted mt-2">Cargando catálogo desde el servidor...</p>
+        </div>
+      ) : (
+        <Row className="g-4">
+          {productosFiltrados.length > 0 ? (
+            productosFiltrados.map((producto) => (
+              <Col key={producto.id} xs={12} sm={6} lg={4}>
+                <ProductCard
+                  producto={producto}
+                  onAgregarCarrito={onAgregarCarrito}
+                />
+              </Col>
+            ))
+          ) : (
+            <Col xs={12}>
+              <div className="alert alert-info text-center">
+                No se encontraron productos que coincidan con la búsqueda.
+              </div>
             </Col>
-          ))
-        ) : (
-          <Col xs={12}>
-            <div className="alert alert-info text-center">
-              No se encontraron productos que coincidan con la búsqueda.
-            </div>
-          </Col>
-        )}
-      </Row>
+          )}
+        </Row>
+      )}
     </Container>
   )
 }

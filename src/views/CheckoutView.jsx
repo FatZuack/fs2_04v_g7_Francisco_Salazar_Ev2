@@ -1,21 +1,25 @@
 import { useState } from 'react'
-import { Container, Row, Col, Card, Form, Button, Alert } from 'react-bootstrap'
-import { Link, useNavigate } from 'react-router-dom'
+import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap'
+import { Link } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
+import { boletaService } from '../services/boletaService'
+import { getErrorMessage } from '../utils/getErrorMessage'
 
 function CheckoutView({ carrito, onVaciarCarrito }) {
-  const navigate = useNavigate()
+  const { usuario } = useAuth()
 
   const [formulario, setFormulario] = useState({
-    nombre: '',
-    email: '',
-    telefono: '',
+    nombre: usuario?.nombre || '',
+    email: usuario?.email || '',
+    telefono: usuario?.telefono || '',
     direccion: '',
-    comuna: 'Santiago',
-    metodoPago: 'debito',
+    comuna: 'Maipú',
+    metodoPago: 'DEBITO',
   })
 
   const [ordenCompletada, setOrdenCompletada] = useState(null)
-  const [errorStock, setErrorStock] = useState('')
+  const [error, setError] = useState('')
+  const [procesando, setProcesando] = useState(false)
 
   const total = carrito.reduce((acc, item) => acc + item.precio * item.cantidad, 0)
 
@@ -24,49 +28,35 @@ function CheckoutView({ carrito, onVaciarCarrito }) {
     setFormulario((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
+    setError('')
+    setProcesando(true)
 
-    // 1. Validar y descontar stock real en localStorage
-    const productosGuardados = JSON.parse(localStorage.getItem('productos') || '[]')
-    let stockInsuficiente = false
-
-    const productosActualizados = productosGuardados.map((prod) => {
-      const enCarrito = carrito.find((item) => item.id === prod.id)
-      if (enCarrito) {
-        if (prod.stock < enCarrito.cantidad) {
-          stockInsuficiente = true
-        }
-        return { ...prod, stock: Math.max(0, prod.stock - enCarrito.cantidad) }
+    try {
+      const payload = {
+        nombreCliente: formulario.nombre.trim(),
+        emailCliente: formulario.email.trim(),
+        telefonoCliente: formulario.telefono.trim(),
+        direccionDespacho: formulario.direccion.trim(),
+        comuna: formulario.comuna,
+        metodoPago: formulario.metodoPago,
+        items: carrito.map((item) => ({
+          productoId: item.id,
+          cantidad: item.cantidad,
+        })),
       }
-      return prod
-    })
 
-    if (stockInsuficiente) {
-      setErrorStock('Uno de los productos seleccionados ya no cuenta con stock suficiente.')
-      return
+      const boletaCreada = await boletaService.create(payload)
+      onVaciarCarrito()
+      setOrdenCompletada(boletaCreada)
+    } catch (err) {
+      setError(getErrorMessage(err))
+    } finally {
+      setProcesando(false)
     }
-
-    // 2. Guardar nuevo stock y registrar la orden
-    localStorage.setItem('productos', JSON.stringify(productosActualizados))
-
-    const nuevaOrden = {
-      idOrden: `ORD-${Date.now().toString().slice(-6)}`,
-      fecha: new Date().toLocaleDateString('es-CL'),
-      cliente: formulario,
-      items: carrito,
-      total,
-    }
-
-    const ordenesPrevias = JSON.parse(localStorage.getItem('ordenes') || '[]')
-    localStorage.setItem('ordenes', JSON.stringify([nuevaOrden, ...ordenesPrevias]))
-
-    // 3. Vaciar carrito y mostrar pantalla de confirmación
-    onVaciarCarrito()
-    setOrdenCompletada(nuevaOrden)
   }
 
-  // Si el usuario llega con el carrito vacío y no acaba de pagar
   if (carrito.length === 0 && !ordenCompletada) {
     return (
       <Container className="py-5 text-center">
@@ -78,28 +68,27 @@ function CheckoutView({ carrito, onVaciarCarrito }) {
     )
   }
 
-  // Vista de Orden Confirmada (Boleta / Comprobante)
   if (ordenCompletada) {
     return (
       <Container className="py-5">
         <Card className="shadow border-0 mx-auto" style={{ maxWidth: '650px' }}>
           <Card.Header className="bg-success text-white text-center py-3">
             <h2 className="h4 mb-0 fw-bold">✓ ¡Pago Procesado con Éxito!</h2>
-            <small>Orden de compra #{ordenCompletada.idOrden}</small>
+            <small>Orden de compra #{ordenCompletada.codigoOrden}</small>
           </Card.Header>
           <Card.Body className="p-4">
             <h5 className="fw-bold mb-3">Detalle del Despacho:</h5>
-            <p className="mb-1"><strong>Destinatario:</strong> {ordenCompletada.cliente.nombre}</p>
-            <p className="mb-1"><strong>Correo:</strong> {ordenCompletada.cliente.email}</p>
-            <p className="mb-1"><strong>Dirección:</strong> {ordenCompletada.cliente.direccion}, {ordenCompletada.cliente.comuna}</p>
-            <p className="mb-4"><strong>Método de Pago:</strong> {ordenCompletada.cliente.metodoPago.toUpperCase()}</p>
+            <p className="mb-1"><strong>Destinatario:</strong> {ordenCompletada.nombreCliente}</p>
+            <p className="mb-1"><strong>Correo:</strong> {ordenCompletada.emailCliente}</p>
+            <p className="mb-1"><strong>Dirección:</strong> {ordenCompletada.direccionDespacho}, {ordenCompletada.comuna}</p>
+            <p className="mb-4"><strong>Método de Pago:</strong> {ordenCompletada.metodoPago}</p>
 
             <h5 className="fw-bold mb-2">Productos adquiridos:</h5>
             <ul className="list-group mb-4">
-              {ordenCompletada.items.map((item) => (
+              {ordenCompletada.detalles.map((item) => (
                 <li key={item.id} className="list-group-item d-flex justify-content-between">
-                  <span>{item.nombre} x {item.cantidad}</span>
-                  <strong>${(item.precio * item.cantidad).toLocaleString('es-CL')}</strong>
+                  <span>{item.nombreProducto} x {item.cantidad}</span>
+                  <strong>${item.subtotal.toLocaleString('es-CL')}</strong>
                 </li>
               ))}
               <li className="list-group-item d-flex justify-content-between bg-light fw-bold fs-5">
@@ -123,7 +112,7 @@ function CheckoutView({ carrito, onVaciarCarrito }) {
     <Container className="py-4">
       <h1 className="h3 fw-bold mb-4">Finalizar Compra y Despacho</h1>
 
-      {errorStock && <Alert variant="danger">{errorStock}</Alert>}
+      {error && <Alert variant="danger">{error}</Alert>}
 
       <Row className="g-4">
         <Col md={7}>
@@ -210,41 +199,47 @@ function CheckoutView({ carrito, onVaciarCarrito }) {
                   type="radio"
                   id="pago-debito"
                   name="metodoPago"
-                  value="debito"
+                  value="DEBITO"
                   label="Redcompra / Tarjeta de Débito (WebPay)"
-                  checked={formulario.metodoPago === 'debito'}
+                  checked={formulario.metodoPago === 'DEBITO'}
                   onChange={handleChange}
                 />
                 <Form.Check
                   type="radio"
                   id="pago-credito"
                   name="metodoPago"
-                  value="credito"
+                  value="CREDITO"
                   label="Tarjeta de Crédito (3 cuotas sin interés)"
-                  checked={formulario.metodoPago === 'credito'}
+                  checked={formulario.metodoPago === 'CREDITO'}
                   onChange={handleChange}
                 />
                 <Form.Check
                   type="radio"
                   id="pago-transferencia"
                   name="metodoPago"
-                  value="transferencia"
+                  value="TRANSFERENCIA"
                   label="Transferencia Bancaria directa"
-                  checked={formulario.metodoPago === 'transferencia'}
+                  checked={formulario.metodoPago === 'TRANSFERENCIA'}
                   onChange={handleChange}
                 />
               </div>
 
               <div className="d-grid">
-                <Button type="submit" variant="success" size="lg">
-                  Confirmar y Pagar ${total.toLocaleString('es-CL')}
+                <Button type="submit" variant="success" size="lg" disabled={procesando}>
+                  {procesando ? (
+                    <>
+                      <Spinner animation="border" size="sm" className="me-2" />
+                      Procesando compra...
+                    </>
+                  ) : (
+                    `Confirmar y Pagar $${total.toLocaleString('es-CL')}`
+                  )}
                 </Button>
               </div>
             </Form>
           </div>
         </Col>
 
-        {/* Resumen lateral de la orden */}
         <Col md={5}>
           <Card className="shadow-sm border-0 sticky-top" style={{ top: '80px' }}>
             <Card.Header className="bg-light fw-bold">Resumen de la Orden</Card.Header>

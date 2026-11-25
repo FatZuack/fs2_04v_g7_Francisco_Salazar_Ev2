@@ -1,34 +1,45 @@
 import { useState } from 'react'
-import { Container, Card, Form, Button, Alert } from 'react-bootstrap'
-import { Link, useNavigate } from 'react-router-dom'
+import { Container, Card, Form, Button, Alert, Spinner } from 'react-bootstrap'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { authService } from '../services/authService'
+import { saveAuthSession } from '../utils/authSession'
+import { getErrorMessage } from '../utils/getErrorMessage'
 
-function LoginView({ onLogin }) {
+function LoginView() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [correo, setCorreo] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [cargando, setCargando] = useState(false)
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
+    setError('')
+    setCargando(true)
 
-    // 1. Obtener lista de usuarios registrados en localStorage
-    const usuarios = JSON.parse(localStorage.getItem('usuarios') || '[]')
+    try {
+      const data = await authService.login(correo.trim(), password)
+      saveAuthSession(data)
 
-    // 2. Buscar coincidencia de credenciales
-    const usuarioValido = usuarios.find(
-      (u) => u.email.toLowerCase() === correo.trim().toLowerCase() && u.password === password
-    )
-
-    if (usuarioValido) {
-      onLogin(usuarioValido)
-      // Si es admin lo llevamos directo al panel, si es cliente a la tienda
-      if (usuarioValido.rol === 'Administrador') {
-        navigate('/admin/productos')
-      } else {
-        navigate('/')
+      // Si venía redirigido de una ruta protegida (ej. /checkout), lo devolvemos allá
+      const destinoPrevio = location.state?.from
+      if (destinoPrevio) {
+        navigate(destinoPrevio, { replace: true })
+        return
       }
-    } else {
-      setError('Credenciales incorrectas. Revisa el correo o la contraseña.')
+
+      if (data.usuario.rol === 'ADMIN') {
+        navigate('/admin/productos', { replace: true })
+      } else if (data.usuario.rol === 'VENDEDOR') {
+        navigate('/ordenes', { replace: true })
+      } else {
+        navigate('/', { replace: true })
+      }
+    } catch (err) {
+      setError(getErrorMessage(err))
+    } finally {
+      setCargando(false)
     }
   }
 
@@ -68,8 +79,15 @@ function LoginView({ onLogin }) {
             </Form.Group>
 
             <div className="d-grid mb-3">
-              <Button variant="primary" type="submit" size="lg">
-                Ingresar
+              <Button variant="primary" type="submit" size="lg" disabled={cargando}>
+                {cargando ? (
+                  <>
+                    <Spinner animation="border" size="sm" className="me-2" />
+                    Ingresando...
+                  </>
+                ) : (
+                  'Ingresar'
+                )}
               </Button>
             </div>
           </Form>
@@ -80,11 +98,12 @@ function LoginView({ onLogin }) {
             </small>
           </div>
 
-          {/* Tarjeta de credenciales demo para la evaluación */}
+          {/* Tarjeta con los 3 roles demo para evaluación */}
           <div className="bg-light p-3 rounded mt-4 border">
             <small className="d-block fw-bold text-dark mb-1">🔑 Cuentas demo para pruebas:</small>
             <div className="small text-muted">
               • <strong>Admin:</strong> admin@milsabores.cl | <strong>Clave:</strong> admin123<br />
+              • <strong>Vendedor:</strong> vendedor@milsabores.cl | <strong>Clave:</strong> vendedor123<br />
               • <strong>Cliente:</strong> cliente@milsabores.cl | <strong>Clave:</strong> 123456
             </div>
           </div>
