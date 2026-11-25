@@ -1,68 +1,25 @@
 import { useEffect, useState } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import NavbarPasteleria from './components/NavbarPasteleria'
+import ProtectedRoute from './components/ProtectedRoute'
 import TiendaView from './views/TiendaView'
 import ProductoDetalleView from './views/ProductoDetalleView'
 import CarritoView from './views/CarritoView'
 import CheckoutView from './views/CheckoutView'
 import AdminProductosView from './views/AdminProductosView'
+import OrdenesView from './views/OrdenesView'
+import AdminUsuariosView from './views/AdminUsuariosView'
 import LoginView from './views/LoginView'
 import RegistroView from './views/RegistroView'
-import { productosIniciales } from './data/productosIniciales'
-
-// Usuarios por defecto para testing y evaluación
-const usuariosIniciales = [
-  {
-    id: 1,
-    nombre: 'Administrador Demo',
-    email: 'admin@milsabores.cl',
-    password: 'admin123',
-    rol: 'Administrador',
-  },
-  {
-    id: 2,
-    nombre: 'Cliente Frecuente',
-    email: 'cliente@milsabores.cl',
-    password: '123456',
-    rol: 'Cliente',
-  },
-]
 
 function App() {
-  // 1. Inicializar catálogo en localStorage
-  useEffect(() => {
-    const productosGuardados = localStorage.getItem('productos')
-    if (!productosGuardados) {
-      localStorage.setItem('productos', JSON.stringify(productosIniciales))
-    }
-
-    // 2. Inicializar usuarios de prueba en localStorage
-    const usuariosGuardados = localStorage.getItem('usuarios')
-    if (!usuariosGuardados) {
-      localStorage.setItem('usuarios', JSON.stringify(usuariosIniciales))
-    }
-  }, [])
-
-  // 3. Manejo de sesión de usuario en sessionStorage
-  const [usuarioSesion, setUsuarioSesion] = useState(() => {
-    const sesion = sessionStorage.getItem('usuarioSesion')
-    return sesion ? JSON.parse(sesion) : null
-  })
-
-  const handleLogin = (usuario) => {
-    sessionStorage.setItem('usuarioSesion', JSON.stringify(usuario))
-    setUsuarioSesion(usuario)
-  }
-
-  const handleLogout = () => {
-    sessionStorage.removeItem('usuarioSesion')
-    setUsuarioSesion(null)
-  }
-
-  // 4. Estado del Carrito en localStorage
   const [carrito, setCarrito] = useState(() => {
-    const guardado = localStorage.getItem('carrito')
-    return guardado ? JSON.parse(guardado) : []
+    try {
+      const guardado = localStorage.getItem('carrito')
+      return guardado ? JSON.parse(guardado) : []
+    } catch {
+      return []
+    }
   })
 
   useEffect(() => {
@@ -75,7 +32,7 @@ function App() {
       if (existe) {
         return prev.map((item) =>
           item.id === producto.id
-            ? { ...item, cantidad: Math.min(item.cantidad + 1, item.stock) }
+            ? { ...item, cantidad: Math.min(item.cantidad + 1, producto.stock) }
             : item
         )
       }
@@ -105,11 +62,7 @@ function App() {
 
   return (
     <div className="bg-light min-vh-100 d-flex flex-column">
-      <NavbarPasteleria
-        totalCarrito={totalItemsCarrito}
-        usuarioSesion={usuarioSesion}
-        onLogout={handleLogout}
-      />
+      <NavbarPasteleria totalCarrito={totalItemsCarrito} />
 
       <main className="flex-grow-1">
         <Routes>
@@ -132,34 +85,53 @@ function App() {
               />
             }
           />
+
+          {/* Checkout requiere usuario autenticado (cualquier rol con JWT) */}
           <Route
             path="/checkout"
             element={
-              <CheckoutView
-                carrito={carrito}
-                onVaciarCarrito={handleVaciarCarrito}
-              />
+              <ProtectedRoute>
+                <CheckoutView
+                  carrito={carrito}
+                  onVaciarCarrito={handleVaciarCarrito}
+                />
+              </ProtectedRoute>
             }
           />
-          {/* Ruta protegida: solo administradores tienen acceso a la gestión */}
+
+          {/* Productos (ADMIN gestiona CRUD completo; VENDEDOR consulta en modo lectura) */}
           <Route
             path="/admin/productos"
             element={
-              usuarioSesion?.rol === 'Administrador' ? (
+              <ProtectedRoute allowedRoles={['ADMIN', 'VENDEDOR']}>
                 <AdminProductosView />
-              ) : (
-                <Navigate to="/login" replace />
-              )
+              </ProtectedRoute>
             }
           />
+
+          {/* Órdenes / Boletas (ADMIN gestiona estados/elimina; VENDEDOR solo consulta lista y detalle) */}
           <Route
-            path="/login"
-            element={<LoginView onLogin={handleLogin} />}
+            path="/ordenes"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN', 'VENDEDOR']}>
+                <OrdenesView />
+              </ProtectedRoute>
+            }
           />
+
+          {/* Usuarios y roles: exclusivo ADMIN */}
           <Route
-            path="/registro"
-            element={<RegistroView onLogin={handleLogin} />}
+            path="/admin/usuarios"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <AdminUsuariosView />
+              </ProtectedRoute>
+            }
           />
+
+          <Route path="/login" element={<LoginView />} />
+          <Route path="/registro" element={<RegistroView />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
 
